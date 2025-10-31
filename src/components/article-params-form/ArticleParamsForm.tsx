@@ -2,7 +2,7 @@ import { ArrowButton } from '../../ui/arrow-button';
 import { Button } from '../../ui/button';
 import styles from './ArticleParamsForm.module.scss';
 import { Text } from '../../ui/text';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Select } from '../../ui/select';
 import { Separator } from '../../ui/separator';
 import { RadioGroup } from '../../ui/radio-group';
@@ -23,7 +23,8 @@ type Props = {
 };
 
 export const ArticleParamsForm = ({ articleState, onChange }: Props) => {
-	const [isOpen, setIsOpen] = useState(false);
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const containerRef = useRef<HTMLElement | null>(null);
 
 	// локальная копия: изменения применяются в родителя только по submit
 	const [localState, setLocalState] = useState<ArticleStateType>(articleState);
@@ -41,11 +42,37 @@ export const ArticleParamsForm = ({ articleState, onChange }: Props) => {
 		onChange(localState);
 	};
 
+	// Закрывать панель при клике вне
+	useEffect(() => {
+		if (!isMenuOpen) return; // если меню закрыто, обработчик не нужен
+		const handleOutside = (e: MouseEvent) => {
+			const target = e.target as Node | null;
+			if (
+				containerRef.current &&
+				target &&
+				!containerRef.current.contains(target)
+			) {
+				setIsMenuOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', handleOutside);
+		return () => {
+			// очистка обработчика при размонтировании или закрытии меню
+			document.removeEventListener('mousedown', handleOutside);
+		};
+	}, [isMenuOpen]);
+
 	return (
 		<>
-			<ArrowButton isOpen={isOpen} onClick={() => setIsOpen((prev) => !prev)} />
+			<ArrowButton
+				isOpen={isMenuOpen}
+				onClick={() => setIsMenuOpen((prev) => !prev)}
+			/>
 			<aside
-				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
+				ref={containerRef}
+				className={clsx(styles.container, {
+					[styles.container_open]: isMenuOpen,
+				})}>
 				<form
 					className={styles.form}
 					onSubmit={handleSubmit}
